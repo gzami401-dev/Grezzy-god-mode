@@ -1,95 +1,219 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local Vortex = {}
+
+-- Utility: Dragging Function
+local function MakeDraggable(clickFrame, dragFrame)
+    local dragging, dragInput, dragStart, startPos
+    clickFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = dragFrame.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            dragFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+end
+
 function Vortex:CreateWindow(config)
+    local config = config or {}
     local title = config.Title or "Vortex UI"
-    local iconId = config.Icon or "rbxassetid://10734944545" -- Default Lucide-style icon
+    local iconId = config.Icon or ""
     local bgImage = config.Background or ""
 
-    local VortexGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-    VortexGui.Name = "VortexLib"
-    
+    local VortexGui = Instance.new("ScreenGui", CoreGui)
+    VortexGui.Name = "Vortex_" .. math.random(100, 999)
+    VortexGui.ResetOnSpawn = false
+
     -- Main Frame
     local Main = Instance.new("Frame", VortexGui)
     Main.Name = "Main"
     Main.Size = UDim2.new(0, 500, 0, 350)
     Main.Position = UDim2.new(0.5, -250, 0.5, -175)
-    Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Main.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    Main.BorderSizePixel = 0
     Main.ClipsDescendants = true
     Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+    Instance.new("UIStroke", Main).Color = Color3.fromRGB(80, 0, 255)
 
-    -- Fitur Background Foto
+    -- Background Image
     if bgImage ~= "" then
         local BG = Instance.new("ImageLabel", Main)
-        BG.Name = "Background"
         BG.Size = UDim2.new(1, 0, 1, 0)
         BG.Image = bgImage
-        BG.ImageTransparency = 0.6 -- Biar teks tetap kebaca
+        BG.ImageTransparency = 0.75
         BG.ScaleType = Enum.ScaleType.Crop
         BG.ZIndex = 0
     end
 
     -- TOP BAR
     local TopBar = Instance.new("Frame", Main)
-    TopBar.Name = "TopBar"
     TopBar.Size = UDim2.new(1, 0, 0, 35)
     TopBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     TopBar.BackgroundTransparency = 0.2
-    
-    -- Logo/Icon
-    local Icon = Instance.new("ImageLabel", TopBar)
-    Icon.Name = "Logo"
-    Icon.Size = UDim2.new(0, 20, 0, 20)
-    Icon.Position = UDim2.new(0, 10, 0.5, -10)
-    Icon.Image = iconId
-    Icon.BackgroundTransparency = 1
+    TopBar.ZIndex = 5
+    MakeDraggable(TopBar, Main)
+
+    -- Icon & Title
+    if iconId ~= "" then
+        local Icon = Instance.new("ImageLabel", TopBar)
+        Icon.Size = UDim2.new(0, 22, 0, 22)
+        Icon.Position = UDim2.new(0, 10, 0.5, -11)
+        Icon.Image = iconId
+        Icon.BackgroundTransparency = 1
+    end
 
     local Title = Instance.new("TextLabel", TopBar)
-    Title.Size = UDim2.new(1, -120, 1, 0)
-    Title.Position = UDim2.new(0, 35, 0, 0)
+    Title.Size = UDim2.new(1, -150, 1, 0)
+    Title.Position = UDim2.new(0, (iconId ~= "" and 40 or 15), 0, 0)
     Title.Text = title
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Font = Enum.Font.GothamBold
     Title.TextSize = 14
+    Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.BackgroundTransparency = 1
 
-    -- Tombol-Tombol Kanan (Close, Max, Min)
-    local ButtonContainer = Instance.new("Frame", TopBar)
-    ButtonContainer.Size = UDim2.new(0, 90, 1, 0)
-    ButtonContainer.Position = UDim2.new(1, -95, 0, 0)
-    ButtonContainer.BackgroundTransparency = 1
+    -- Control Buttons
+    local BtnContainer = Instance.new("Frame", TopBar)
+    BtnContainer.Size = UDim2.new(0, 100, 1, 0)
+    BtnContainer.Position = UDim2.new(1, -105, 0, 0)
+    BtnContainer.BackgroundTransparency = 1
 
-    local function createTopBtn(name, text, color, pos)
-        local b = Instance.new("TextButton", ButtonContainer)
-        b.Name = name
-        b.Size = UDim2.new(0, 25, 0, 25)
+    local function CreateTopBtn(txt, color, pos, callback)
+        local b = Instance.new("TextButton", BtnContainer)
+        b.Size = UDim2.new(0, 24, 0, 24)
         b.Position = UDim2.new(0, pos, 0.5, -12)
         b.BackgroundColor3 = color
-        b.Text = text
+        b.Text = txt
         b.TextColor3 = Color3.fromRGB(255, 255, 255)
         b.Font = Enum.Font.GothamBold
         Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
-        return b
+        b.MouseButton1Click:Connect(callback)
     end
 
-    local closeBtn = createTopBtn("Close", "×", Color3.fromRGB(200, 50, 50), 60)
-    local maxBtn = createTopBtn("Max", "□", Color3.fromRGB(50, 150, 50), 30)
-    local minBtn = createTopBtn("Min", "−", Color3.fromRGB(200, 150, 50), 0)
-
-    -- LOGIKA TOMBOL
-    closeBtn.MouseButton1Click:Connect(function() VortexGui:Destroy() end)
-
-    local minimized = false
-    minBtn.MouseButton1Click:Connect(function()
-        minimized = not minimized
-        local targetSize = minimized and UDim2.new(0, 500, 0, 35) or UDim2.new(0, 500, 0, 350)
-        game:GetService("TweenService"):Create(Main, TweenInfo.new(0.3), {Size = targetSize}):Play()
+    CreateTopBtn("×", Color3.fromRGB(200, 60, 60), 70, function() VortexGui:Destroy() end)
+    
+    local isFull = false
+    CreateTopBtn("□", Color3.fromRGB(60, 160, 60), 40, function()
+        isFull = not isFull
+        TweenService:Create(Main, TweenInfo.new(0.3), {Size = isFull and UDim2.new(0, 700, 0, 450) or UDim2.new(0, 500, 0, 350)}):Play()
     end)
 
-    local full = false
-    maxBtn.MouseButton1Click:Connect(function()
-        full = not full
-        local targetSize = full and UDim2.new(0, 700, 0, 450) or UDim2.new(0, 500, 0, 350)
-        game:GetService("TweenService"):Create(Main, TweenInfo.new(0.3), {Size = targetSize}):Play()
+    local isMin = false
+    CreateTopBtn("−", Color3.fromRGB(200, 160, 60), 10, function()
+        isMin = not isMin
+        TweenService:Create(Main, TweenInfo.new(0.3), {Size = isMin and UDim2.new(0, 500, 0, 35) or UDim2.new(0, 500, 0, 350)}):Play()
     end)
 
-    -- (Lanjutkan kode Container dan Sidebar seperti sebelumnya...)
+    -- Sidebar & Content
+    local Sidebar = Instance.new("Frame", Main)
+    Sidebar.Size = UDim2.new(0, 140, 1, -45)
+    Sidebar.Position = UDim2.new(0, 10, 0, 45)
+    Sidebar.BackgroundTransparency = 1
+    Instance.new("UIListLayout", Sidebar).Padding = UDim.new(0, 5)
+
+    local Container = Instance.new("Frame", Main)
+    Container.Size = UDim2.new(1, -170, 1, -55)
+    Container.Position = UDim2.new(0, 160, 0, 45)
+    Container.BackgroundTransparency = 1
+
+    local Tabs = {}
+    local first = true
+
+    function Tabs:CreateTab(name)
+        local Page = Instance.new("ScrollingFrame", Container)
+        Page.Size = UDim2.new(1, 0, 1, 0)
+        Page.BackgroundTransparency = 1
+        Page.Visible = first
+        Page.ScrollBarThickness = 2
+        Instance.new("UIListLayout", Page).Padding = UDim.new(0, 8)
+
+        local TabBtn = Instance.new("TextButton", Sidebar)
+        TabBtn.Size = UDim2.new(1, 0, 0, 32)
+        TabBtn.BackgroundColor3 = first and Color3.fromRGB(80, 0, 255) or Color3.fromRGB(25, 25, 25)
+        TabBtn.Text = name
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabBtn.Font = Enum.Font.Gotham
+        Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, v in pairs(Container:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible = false end end
+            for _, v in pairs(Sidebar:GetChildren()) do if v:IsA("TextButton") then v.BackgroundColor3 = Color3.fromRGB(25, 25, 25) end end
+            Page.Visible = true
+            TabBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 255)
+        end)
+
+        first = false
+        local Elements = {}
+
+        -- BUTTON
+        function Elements:CreateButton(text, callback)
+            local b = Instance.new("TextButton", Page)
+            b.Size = UDim2.new(1, -10, 0, 35)
+            b.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            b.Text = text
+            b.TextColor3 = Color3.fromRGB(255, 255, 255)
+            b.Font = Enum.Font.Gotham
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+            b.MouseButton1Click:Connect(callback)
+        end
+
+        -- TOGGLE
+        function Elements:CreateToggle(text, default, callback)
+            local state = default
+            local t = Instance.new("TextButton", Page)
+            t.Size = UDim2.new(1, -10, 0, 35)
+            t.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            t.Text = "  " .. text
+            t.TextColor3 = Color3.fromRGB(255, 255, 255)
+            t.Font = Enum.Font.Gotham
+            t.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UICorner", t).CornerRadius = UDim.new(0, 6)
+
+            local ind = Instance.new("Frame", t)
+            ind.Size = UDim2.new(0, 18, 0, 18)
+            ind.Position = UDim2.new(1, -28, 0.5, -9)
+            ind.BackgroundColor3 = state and Color3.fromRGB(80, 0, 255) or Color3.fromRGB(60, 60, 60)
+            Instance.new("UICorner", ind).CornerRadius = UDim.new(1, 0)
+
+            t.MouseButton1Click:Connect(function()
+                state = not state
+                TweenService:Create(ind, TweenInfo.new(0.2), {BackgroundColor3 = state and Color3.fromRGB(80, 0, 255) or Color3.fromRGB(60, 60, 60)}):Play()
+                callback(state)
+            end)
+        end
+
+        return Elements
+    end
+
+    function Vortex:Notify(text, dur)
+        local n = Instance.new("TextLabel", VortexGui)
+        n.Size = UDim2.new(0, 200, 0, 40)
+        n.Position = UDim2.new(1, 5, 1, -50)
+        n.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        n.Text = text
+        n.TextColor3 = Color3.fromRGB(255, 255, 255)
+        n.Font = Enum.Font.GothamBold
+        Instance.new("UIStroke", n).Color = Color3.fromRGB(80, 0, 255)
+        Instance.new("UICorner", n)
+        
+        n:TweenPosition(UDim2.new(1, -210, 1, -50), "Out", "Quart", 0.5)
+        task.wait(dur or 3)
+        n:TweenPosition(UDim2.new(1, 5, 1, -50), "In", "Quart", 0.5)
+        task.delay(0.5, function() n:Destroy() end)
+    end
+
+    return Tabs
 end
+
+return Vortex
