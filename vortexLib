@@ -1,0 +1,151 @@
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+local Vortex = {}
+
+function Vortex:CreateWindow(title)
+    local VortexGui = Instance.new("ScreenGui", CoreGui)
+    VortexGui.Name = "VortexLib"
+    VortexGui.ResetOnSpawn = false
+
+    -- Main Frame
+    local Main = Instance.new("Frame", VortexGui)
+    Main.Name = "Main"
+    Main.Size = UDim2.new(0, 500, 0, 350)
+    Main.Position = UDim2.new(0.5, -250, 0.5, -175)
+    Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    Main.BackgroundTransparency = 0.1
+    Main.BorderSizePixel = 0
+
+    local MainCorner = Instance.new("UICorner", Main)
+    MainCorner.CornerRadius = UDim.new(0, 10)
+
+    local Stroke = Instance.new("UIStroke", Main)
+    Stroke.Color = Color3.fromRGB(80, 0, 255) -- Neon Purple
+    Stroke.Thickness = 1.8
+
+    -- Sidebar (Tempat Tab)
+    local Sidebar = Instance.new("Frame", Main)
+    Sidebar.Name = "Sidebar"
+    Sidebar.Size = UDim2.new(0, 140, 1, -40)
+    Sidebar.Position = UDim2.new(0, 10, 0, 30)
+    Sidebar.BackgroundTransparency = 1
+
+    local TabList = Instance.new("UIListLayout", Sidebar)
+    TabList.Padding = UDim.new(0, 5)
+
+    -- Container Utama
+    local Container = Instance.new("Frame", Main)
+    Container.Name = "Container"
+    Container.Size = UDim2.new(1, -170, 1, -50)
+    Container.Position = UDim2.new(0, 160, 0, 40)
+    Container.BackgroundTransparency = 1
+
+    -- Title
+    local Title = Instance.new("TextLabel", Main)
+    Title.Size = UDim2.new(1, -20, 0, 30)
+    Title.Position = UDim2.new(0, 15, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = title
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 16
+
+    -- Drag System
+    local dragging, dragInput, dragStart, startPos
+    Main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true; dragStart = input.Position; startPos = Main.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    Main.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    local Tabs = {}
+    local firstTab = true
+
+    function Tabs:CreateTab(name)
+        local Page = Instance.new("ScrollingFrame", Container)
+        Page.Size = UDim2.new(1, 0, 1, 0)
+        Page.BackgroundTransparency = 1
+        Page.Visible = firstTab
+        Page.ScrollBarThickness = 0
+        
+        local PageLayout = Instance.new("UIListLayout", Page)
+        PageLayout.Padding = UDim.new(0, 8)
+
+        local TabBtn = Instance.new("TextButton", Sidebar)
+        TabBtn.Size = UDim2.new(1, 0, 0, 30)
+        TabBtn.BackgroundColor3 = firstTab and Color3.fromRGB(80, 0, 255) or Color3.fromRGB(30, 30, 30)
+        TabBtn.Text = name
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabBtn.Font = Enum.Font.Gotham
+        TabBtn.TextSize = 14
+        Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, v in pairs(Container:GetChildren()) do v.Visible = false end
+            for _, v in pairs(Sidebar:GetChildren()) do 
+                if v:IsA("TextButton") then v.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end 
+            end
+            Page.Visible = true
+            TabBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 255)
+        end)
+
+        firstTab = false
+        local Elements = {}
+
+        -- Button Element
+        function Elements:CreateButton(text, callback)
+            local Btn = Instance.new("TextButton", Page)
+            Btn.Size = UDim2.new(1, -10, 0, 35)
+            Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            Btn.Text = text
+            Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Btn.Font = Enum.Font.Gotham
+            Btn.TextSize = 14
+            Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+            
+            Btn.MouseButton1Click:Connect(callback)
+        end
+
+        -- Toggle Element
+        function Elements:CreateToggle(text, default, callback)
+            local state = default
+            local TglFrame = Instance.new("TextButton", Page)
+            TglFrame.Size = UDim2.new(1, -10, 0, 35)
+            TglFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            TglFrame.Text = "  " .. text
+            TglFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
+            TglFrame.Font = Enum.Font.Gotham
+            TglFrame.TextSize = 14
+            TglFrame.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UICorner", TglFrame).CornerRadius = UDim.new(0, 6)
+
+            local Indicator = Instance.new("Frame", TglFrame)
+            Indicator.Size = UDim2.new(0, 20, 0, 20)
+            Indicator.Position = UDim2.new(1, -30, 0.5, -10)
+            Indicator.BackgroundColor3 = state and Color3.fromRGB(80, 0, 255) or Color3.fromRGB(60, 60, 60)
+            Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+
+            TglFrame.MouseButton1Click:Connect(function()
+                state = not state
+                TweenService:Create(Indicator, TweenInfo.new(0.3), {BackgroundColor3 = state and Color3.fromRGB(80, 0, 255) or Color3.fromRGB(60, 60, 60)}):Play()
+                callback(state)
+            end)
+        end
+
+        return Elements
+    end
+    return Tabs
+end
+
+return Vortex
